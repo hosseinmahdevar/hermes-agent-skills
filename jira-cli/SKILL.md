@@ -1,7 +1,7 @@
 ---
 name: jira-cli
 description: 'Interact with Atlassian Jira from the terminal: search issues, view
-  details, create issues, add comments, list projects, and transition status. Use
+  details, create issues, add comments, list projects, transition status, and log time (worklog). Use
   when the user mentions Jira, a ticket key (e.g. PROJ-123), or asks about issues,
   bugs, tasks, projects, or sprint work.'
 license: MIT
@@ -15,7 +15,7 @@ metadata:
 
 # jira-cli — Jira Issue Tracker from the Terminal
 
-Interact with Atlassian Jira Cloud via the REST API v3. Search issues, view details, create issues, add comments, list projects, and transition status.
+Interact with Atlassian Jira Cloud via the REST API v3. Search issues, view details, create issues, add comments, list projects, transition status, and log time (worklog).
 
 ## Setup
 
@@ -80,6 +80,12 @@ jira-cli create --project PROJ --summary "Test" --dry-run           # preview
 ```bash
 jira-cli comment PROJ-123 -m "Fixed in latest build"   # add comment
 jira-cli comment PROJ-123 -m "Looking into it" --dry-run
+```
+
+### worklog — Log time spent
+
+```bash
+jira-cli worklog PROJ-123 --time "2h 30m" --comment "Investigated login issue"
 ```
 
 ### transition — Change issue status

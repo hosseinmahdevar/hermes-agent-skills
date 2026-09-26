@@ -202,6 +202,19 @@ class JiraClient:
             }
         })
 
+    def add_worklog(self, issue_key: str, time_spent: str, comment: Optional[str] = None) -> Any:
+        data = {"timeSpent": time_spent}
+        if comment:
+            data["comment"] = {
+                "type": "doc",
+                "version": 1,
+                "content": [{
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": comment}]
+                }]
+            }
+        return self._post(f"/issue/{issue_key}/worklog", json_data=data)
+
     def get_transitions(self, issue_key: str) -> Any:
         return self._get(f"/issue/{issue_key}/transitions")
 
@@ -425,6 +438,26 @@ def cmd_comment(client: JiraClient, args: List[str]) -> None:
           "comment_id": cid})
 
 
+def cmd_worklog(client: JiraClient, args: List[str]) -> None:
+    parser = argparse.ArgumentParser(prog="jira-cli worklog")
+    parser.add_argument("issue_key", help="Issue key (e.g. PROJ-123)")
+    parser.add_argument("--time", required=True, help="Time spent (e.g. '2h', '30m', '1d 2h')")
+    parser.add_argument("--comment", "-m", default="", help="Worklog comment (optional)")
+    parsed, _ = parser.parse_known_args(args)
+
+    if client.dry_run:
+        emit(f"[dry-run] Would add worklog to {parsed.issue_key} ({parsed.time})",
+             {"dry_run": True, "command": "worklog",
+              "issue_key": parsed.issue_key, "time": parsed.time, "comment": parsed.comment})
+        return
+
+    result = client.add_worklog(parsed.issue_key, parsed.time, parsed.comment)
+    wid = result.get("id", "?") if result else "?"
+    emit(f"⏱️ Worklog added to {parsed.issue_key} (id={wid}, time={parsed.time})",
+         {"status": "worklog_added", "issue_key": parsed.issue_key,
+          "worklog_id": wid, "time_spent": parsed.time})
+
+
 def cmd_transition(client: JiraClient, args: List[str]) -> None:
     parser = argparse.ArgumentParser(prog="jira-cli transition")
     parser.add_argument("issue_key", help="Issue key (e.g. PROJ-123)")
@@ -506,6 +539,11 @@ def main() -> None:
     p_trans.add_argument("issue_key", help="Issue key")
     p_trans.add_argument("--to", required=True, help="Transition name or ID")
 
+    p_worklog = sub.add_parser("worklog", help="Log time spent on an issue")
+    p_worklog.add_argument("issue_key", help="Issue key")
+    p_worklog.add_argument("--time", required=True, help="Time spent (e.g. '2h', '30m')")
+    p_worklog.add_argument("--comment", "-m", default="", help="Optional worklog comment")
+
     args = parser.parse_args(filtered_argv[1:])
     if not args.command:
         parser.print_help()
@@ -529,6 +567,7 @@ def main() -> None:
         "projects": cmd_projects,
         "create": cmd_create,
         "comment": cmd_comment,
+        "worklog": cmd_worklog,
         "transition": cmd_transition,
     }
     handler = cmd_map.get(args.command)
